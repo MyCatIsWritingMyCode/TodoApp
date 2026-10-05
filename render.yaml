@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: chorequest-api
+    runtime: docker
+    dockerfilePath: ./Backend/Dockerfile
+    dockerContext: ./Backend
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: EnableApiDocs
+        value: "true"
+      - key: ConnectionStrings__DefaultConnection
+        sync: false # Set securely in Render dashboard with your Supabase connection string
+      - key: Jwt__Issuer
+        value: TodoApp.Api
+      - key: Jwt__Audience
+        value: TodoApp.Client
+      - key: Jwt__SecretKey
+        generateValue: true # Render automatically generates a 256-bit cryptographic secret
+      - key: Encryption__Key
+        generateValue: true # Render automatically generates an AES-256-GCM encryption key
+

@@ -1,0 +1,227 @@
+@TodoApp.Api_HostAddress = http://localhost:5287
+
+### 1. Health Check
+GET {{TodoApp.Api_HostAddress}}/health
+Accept: application/json
+
+### ====================================================================
+### 2. AUTHENTICATION & IDENTITY
+### ====================================================================
+
+### Register a new user
+# @name registerUser
+POST {{TodoApp.Api_HostAddress}}/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "johndoe",
+  "email": "johndoe@example.com",
+  "password": "SecurePassword123!"
+}
+
+### Login with Demo User (Seeds automatically on startup)
+# @name loginDemo
+POST {{TodoApp.Api_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "usernameOrEmail": "demo",
+  "password": "Password123!"
+}
+
+### Extract the JWT token from the login response
+@authToken = {{loginDemo.response.body.token}}
+
+### Get Current User Profile (Requires Bearer Token)
+GET {{TodoApp.Api_HostAddress}}/api/auth/me
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Try Login with Invalid Password (Expect 401 Unauthorized)
+POST {{TodoApp.Api_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "usernameOrEmail": "demo",
+  "password": "WrongPassword!"
+}
+
+### Try Registering with Weak Password (Expect 400 Validation Problem)
+POST {{TodoApp.Api_HostAddress}}/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "weakuser",
+  "email": "weak@example.com",
+  "password": "123"
+}
+
+### ====================================================================
+### 3. USER-SCOPED TODOS (AUTHENTICATED)
+### ====================================================================
+
+### Get all todos for current user
+GET {{TodoApp.Api_HostAddress}}/api/todos
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Get pending todos only
+GET {{TodoApp.Api_HostAddress}}/api/todos?isCompleted=false
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Search todos (by title or decrypted description)
+GET {{TodoApp.Api_HostAddress}}/api/todos?search=encryption
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Create a new todo (Description is automatically encrypted with AES-256-GCM in DB)
+# @name createTodo
+POST {{TodoApp.Api_HostAddress}}/api/todos
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "title": "Confidential project roadmap",
+  "description": "Top secret quarterly plan: launch enterprise features with full field-level encryption.",
+  "priority": 2,
+  "dueDate": "2026-10-15T10:00:00Z"
+}
+
+### Get created todo ID
+@createdTodoId = {{createTodo.response.body.id}}
+
+### Get todo by ID
+GET {{TodoApp.Api_HostAddress}}/api/todos/{{createdTodoId}}
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Update a todo
+PUT {{TodoApp.Api_HostAddress}}/api/todos/{{createdTodoId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "title": "Confidential project roadmap (Updated)",
+  "description": "Updated top secret plan: deploy authenticated API with rate limiting and logging.",
+  "isCompleted": false,
+  "priority": 2,
+  "dueDate": "2026-10-20T18:00:00Z"
+}
+
+### Toggle completion status
+PATCH {{TodoApp.Api_HostAddress}}/api/todos/{{createdTodoId}}/toggle
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Delete a todo
+DELETE {{TodoApp.Api_HostAddress}}/api/todos/{{createdTodoId}}
+Authorization: Bearer {{authToken}}
+Accept: application/json
+
+### Unauthenticated request (Expect 401 Unauthorized)
+GET {{TodoApp.Api_HostAddress}}/api/todos
+Accept: application/json
+
+### ====================================================================
+### 4. AES-256-GCM FIELD ENCRYPTION / DECRYPTION UTILITIES
+### ====================================================================
+
+### Encrypt sensitive plaintext
+# @name encryptPayload
+POST {{TodoApp.Api_HostAddress}}/api/crypto/encrypt
+Content-Type: application/json
+
+{
+  "plainText": "Sensitive customer credit card number: 4111-2222-3333-4444"
+}
+
+### Extract ciphertext from response
+@encryptedCipher = {{encryptPayload.response.body.cipherText}}
+
+### Decrypt ciphertext and verify cryptographic tag
+POST {{TodoApp.Api_HostAddress}}/api/crypto/decrypt
+Content-Type: application/json
+
+{
+  "cipherText": "{{encryptedCipher}}"
+}
+
+
+### ====================================================================
+### 5. CHOREQUEST RPG GAMIFICATION & HOUSEHOLD
+### ====================================================================
+
+### Get current household RPG status
+# @name getHousehold
+GET {{TodoApp.Api_HostAddress}}/api/household
+Accept: application/json
+
+### Add XP to household and member
+POST {{TodoApp.Api_HostAddress}}/api/household/xp
+Content-Type: application/json
+
+{
+  "xpAmount": 150,
+  "memberId": 1
+}
+
+### Get all family members
+# @name getMembers
+GET {{TodoApp.Api_HostAddress}}/api/household/members
+Accept: application/json
+
+### Add a new family member
+POST {{TodoApp.Api_HostAddress}}/api/household/members
+Content-Type: application/json
+
+{
+  "name": "Oliver (Grandpa)",
+  "avatar": "🧙",
+  "color": "#8B5CF6",
+  "role": "member",
+  "activeSkinId": "dark"
+}
+
+### Update family member's UI skin
+PUT {{TodoApp.Api_HostAddress}}/api/household/members/1/skin
+Content-Type: application/json
+
+{
+  "skinId": "cyberpunk"
+}
+
+### Get shared whiteboard sticky notes
+# @name getNotes
+GET {{TodoApp.Api_HostAddress}}/api/household/notes
+Accept: application/json
+
+### Post a new memo to the shared pinboard
+# @name createNote
+POST {{TodoApp.Api_HostAddress}}/api/household/notes
+Content-Type: application/json
+
+{
+  "title": "Grocery Run Needed",
+  "content": "Need milk, eggs, gluten-free bread, and coffee beans.",
+  "color": "#BAE6FD",
+  "isPinned": false,
+  "authorMemberId": 1
+}
+
+### Delete a sticky note
+DELETE {{TodoApp.Api_HostAddress}}/api/household/notes/1
+Accept: application/json
+
+### Upgrade household subscription tier
+POST {{TodoApp.Api_HostAddress}}/api/household/subscription/upgrade
+Content-Type: application/json
+
+{
+  "tier": "premium"
+}
+
+### Get 30-day chore completion heatmap
+GET {{TodoApp.Api_HostAddress}}/api/household/heatmap
+Accept: application/json
+
